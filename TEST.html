@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head><title>TEST</title>
+<style>
+body { padding: 1vw; }
+input,button { margin-left: 1vw; height: 45vw; height:5vh; font-size: 3vh; box-sizing: border-box; }
+ul li { font-size: 2.5vh; width: 90vw; display:block; word-break:break-all; }
+red { color: #F00; }
+</style>
+</head>
+<body>
+<input id="serverAddress" type="text" search x-webkit-speech="x-webkit-speech" />
+<button id="serverSubmit" onclick="model.updateServer(document.getElementById('serverAddress').value)">Ìá½»</button>
+<input id="queryText" type="text" search x-webkit-speech="x-webkit-speech" onfocus="this.value=''" onwebkitspeechchange="model.query(this.value);" />
+<button id="querySubmit" onclick="model.query(document.getElementById('queryText').value)">ËÑË÷</button>
+<ul id="queryResult">
+</ul>
+<script>
+var model = {
+root: function() { return this.server + '.ngrok.io' ; },
+server: '',
+updateServer: function(value){
+    if (value && value.length > 0) this.server = value;
+    if (confirm('is server address ok?' + this.root())){
+        document.getElementById('serverAddress').style.display = 'none';
+        document.getElementById('serverSubmit').style.display = 'none';
+    }
+},
+query: function(value){
+    var dom = document.getElementById('queryResult');
+    dom.innerHTML = '';
+    this.ajax(value).then(function(result){
+	var datas = result.highlighting;
+	for (var data in datas){
+	    var title = data;
+            var content = datas[data].content;
+            var newLi = document.createElement("li"); 
+            newLi.innerHTML = content;
+            dom.appendChild(newLi);         
+	}
+        if (result.response.numFound == 0) dom.innerHTML = "<li>no result.</li>";
+    }).catch(function(err){  dom.innerHTML="<li>"+err+"</li>"; });
+},
+ajax: function(value){
+    return new Promise(function(resolve,reject){
+       var head = document.getElementsByTagName('head')[0];
+       var script = document.createElement('script');
+       head.appendChild(script);
+       var timer = setTimeout(function(){ reject(script.src + ' time out!'); head.removeChild(script); },1000);
+       window.callback = function(data){
+              clearTimeout(timer);
+              resolve(data);
+              head.removeChild(script);
+       }       
+       if (model.server.length > 0) script.src = "http://" + model.root() + "/solr/newcore/select?wt=json&json.wrf=callback&df=content&hl.simple.post=%3C/red%3E&hl.simple.pre=%3Cred%3E&hl=on&q=" + encodeURI(value) + "&callback=callback";
+	else script.src = "http://10.102.18.55:8983/solr/newcore/select?wt=json&json.wrf=callback&df=content&hl.simple.post=%3C/red%3E&hl.simple.pre=%3Cred%3E&hl=on&q=" + encodeURI(value) + "&callback=callback";
+    });
+}
+};
+</script>
+</body>
+</html>
